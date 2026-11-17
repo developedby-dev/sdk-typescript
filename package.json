@@ -1,0 +1,61 @@
+{
+  "name": "@bydev/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "bydev 라이선스 API 공식 TypeScript/JavaScript SDK — 로그인 · 토큰 갱신 · 세션 리스 · 토큰 검증 · 업데이트 확인",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://developedby.dev/sell/docs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/developedby-dev/sdk-typescript.git"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./node": "./src/node.ts",
+    "./extension": "./src/extension.ts"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
+      },
+      "./node": {
+        "types": "./dist/node.d.ts",
+        "default": "./dist/node.js"
+      },
+      "./extension": {
+        "types": "./dist/extension.d.ts",
+        "default": "./dist/extension.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm run build",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

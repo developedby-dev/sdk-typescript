@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "bydev SDK 예제",
+  "version": "0.1.0",
+  "description": "bydev SDK로 로그인 · 세션 리스를 잇는 MV3 확장의 가장 작은 예",
+  "minimum_chrome_version": "137",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["storage", "alarms"],
+  "host_permissions": ["https://api.developedby.dev/*"]
+}

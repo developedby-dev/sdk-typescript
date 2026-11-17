@@ -1,0 +1,62 @@
+# 출시 — 공개 거울 developedby-dev/sdk-typescript (ADR-0050). 원천은 모노레포 sdks/typescript/.github/workflows/release.yml — 거울에서 고치지 않는다.
+# 판 태그(v1.0.0)를 밀면 짓고 시험한 꾸러미를, 환경 release에서 대표가 승인한 뒤 npm 신뢰 게시(OIDC — 출처 증명은 자동)로 올린다.
+# 손으로 돌리면(workflow_dispatch) 짓기 · 시험만 한다. 순서는 모노레포 docs/runbooks/sdk-release.md
+name: release
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: release
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "24"
+      - run: npm install --global pnpm@12.9.1
+      - run: pnpm install
+      - run: pnpm run typecheck
+      - run: pnpm test
+      - run: npm pack
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package
+          path: "*.tgz"
+          if-no-files-found: error
+  publish:
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      # 신뢰 게시는 npm CLI 11.5.1 이상
+      - run: npm install --global npm@11
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+      - name: 태그와 꾸러미 판이 같은지
+        env:
+          TAG: ${{ github.ref_name }}
+        run: test -f "bydev-sdk-${TAG#v}.tgz"
+      - name: 게시 (신뢰 게시 · 출처 증명)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: npm publish "./bydev-sdk-${TAG#v}.tgz" --access public
