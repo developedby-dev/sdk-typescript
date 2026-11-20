@@ -7,10 +7,13 @@
 
 | 지원 | 버전 |
 |---|---|
-| 동작 명세 | 1.1.0 |
+| 동작 명세 | 1.1.1 |
 | API | v1 |
 | 런타임 | Node 24, Chrome과 Edge 137 이상(WebCrypto Ed25519를 지원하는 버전, 2025년 5월 출시), Electron 메인 프로세스(해당 Electron의 Node가 WebCrypto Ed25519를 지원해야 합니다) |
 | 타입 | TypeScript 5.7 이상(`Uint8Array<…>` 표기를 씁니다). `@bydev/sdk/node`를 쓰려면 `@types/node`도 필요합니다. 패키지에는 JS와 타입 정의(`dist`)가 들어 있습니다. |
+
+패키지 이름은 `@bydev/sdk`입니다. 지금 npm에 있는 0.x 판은 이름을 먼저 등록하려고 낸 미리보기입니다. 1.0.0은 서비스 오픈과 함께 내며, 그 전에는
+호환되지 않는 변경이 있을 수 있습니다. 판매하는 앱에는 1.0.0 이상을 써 주세요.
 
 ## 빠른 시작
 
@@ -148,3 +151,4 @@ Electron 앱의 `electronCredentialStore`는 이 도구를 쓰지 않습니다.
 ## 출처 확인
 
 이 꾸러미는 공개 저장소 `developedby-dev/sdk-typescript`의 GitHub Actions가 판 태그에서 짓고 올립니다. npm에 올린 꾸러미에는 출처 증명(provenance)이 있습니다. 설치한 프로젝트에서 `npm audit signatures`로 확인할 수 있고, npm 꾸러미 화면의 「Provenance」에서 지은 저장소와 워크플로를 볼 수 있습니다.
+첫 판 0.1.0만은 예외입니다. npm의 신뢰 게시는 꾸러미가 생긴 뒤에만 걸 수 있어 손으로 올렸고, 출처 증명이 없습니다.

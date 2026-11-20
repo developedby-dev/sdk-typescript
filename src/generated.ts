@@ -1,7 +1,7 @@
 // 생성된 파일 — 고치지 않는다. 원천: packages/contracts · sdks/spec/rules.json
 // 다시 만들기: pnpm --filter @bydev/sdk-codegen generate
 
-export const SPEC_VERSION = "1.1.0";
+export const SPEC_VERSION = "1.1.1";
 
 /** RFC 8628 디바이스 코드 grant_type */
 export const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
@@ -185,7 +185,7 @@ export const ROUTES = {
 
 /** sdks/spec/rules.json */
 export const RULES = {
-  specVersion: "1.1.0",
+  specVersion: "1.1.1",
   api: "v1",
   userAgent: {
     languages: ["typescript", "dotnet", "swift", "kotlin", "python", "go", "rust", "c"],

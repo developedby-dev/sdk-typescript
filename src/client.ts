@@ -45,7 +45,7 @@ export interface LicenseClientConfig {
 }
 
 /**
- * bydev 라이선스 API 클라이언트. 로그인 · 갱신 · 세션 · 검증 · 업데이트를 명세(`sdks/spec`)대로 한다. 서버 응답 하나의 참/거짓으로 기능을 열지 않는다 —
+ * 데브 라이선스 API 클라이언트. 로그인 · 갱신 · 세션 · 검증 · 업데이트를 명세(`sdks/spec`)대로 한다. 서버 응답 하나의 참/거짓으로 기능을 열지 않는다 —
  * 세션 상태(`session().state`)와 검증된 토큰의 클레임을 쓴다
  */
 export class LicenseClient {

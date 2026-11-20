@@ -67,9 +67,10 @@ export class LoginAttempt {
     else this.resolve(outcome);
   }
 
-  /** 폴링 지터는 위로만 — interval보다 이르게 보내면 SLOW_DOWN이다 */
-  private schedulePoll(): void {
-    const delay = jittered(this.ports, this.intervalSec * 1000, RULES.login.pollJitter);
+  /** 폴링 지터는 위로만 — interval보다 이르게 보내면 SLOW_DOWN이다. 429면 retryAfterSec보다 이르게 묻지 않는다(명세 5절) */
+  private schedulePoll(retryAfterSec: number | null = null): void {
+    let delay = jittered(this.ports, this.intervalSec * 1000, RULES.login.pollJitter);
+    if (retryAfterSec !== null) delay = Math.max(delay, retryAfterSec * 1000);
     if (this.ports.clock.now() + delay > this.expiresAtMs) {
       this.finish(new BydevError("EXPIRED_TOKEN", "로그인 코드가 만료됐다 — 처음부터 다시"));
       return;
@@ -100,8 +101,12 @@ export class LoginAttempt {
         this.finish(sdkError("PROTOCOL_ERROR", String(error)));
         return;
       }
-      if (error.code === "AUTHORIZATION_PENDING" || error.transient) {
+      if (error.code === "AUTHORIZATION_PENDING") {
         this.schedulePoll();
+      } else if (error.transient) {
+        this.schedulePoll(
+          error.code === "RATE_LIMITED" || error.httpStatus === 429 ? error.retryAfterSec : null,
+        );
       } else if (error.code === "SLOW_DOWN") {
         this.intervalSec =
           error.retryAfterSec ?? this.intervalSec + RULES.login.slowDownIncrementSec;
