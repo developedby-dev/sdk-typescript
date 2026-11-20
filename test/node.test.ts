@@ -2,6 +2,7 @@ import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { RULES } from "../src/generated.ts";
 import {
   defaultNodeCredentialStore,
   dpapiCredentialStore,
@@ -23,22 +24,38 @@ const RECORD = {
 /** 명령 · 파일을 기록하는 가짜 — 운영체제 명령이 없는 곳에서 명령 모양과 해석을 본다 */
 function fakeDeps(
   platform: NodeJS.Platform,
-  answers: Record<string, string | Error>,
+  answers: Record<string, string | Error | (string | Error)[]>,
 ): NodeDeps & {
   calls: { command: string; args: readonly string[]; input?: string }[];
   files: Map<string, string>;
+  slept: number[];
 } {
   const calls: { command: string; args: readonly string[]; input?: string }[] = [];
   const files = new Map<string, string>();
+  const slept: number[] = [];
   return {
     platform,
     calls,
     files,
+    slept,
     exec: async (command, args, input) => {
       calls.push({ command, args, ...(input === undefined ? {} : { input }) });
-      const answer = answers[`${command} ${args[0] ?? ""}`] ?? answers[command];
+      const key =
+        answers[`${command} ${args[0] ?? ""}`] !== undefined
+          ? `${command} ${args[0] ?? ""}`
+          : command;
+      let answer = answers[key];
+      if (Array.isArray(answer)) {
+        // 차례로 — 마지막 값을 되풀이
+        const [head, ...rest] = answer;
+        if (rest.length > 0) answers[key] = rest;
+        answer = head;
+      }
       if (answer instanceof Error) throw answer;
       return answer ?? "";
+    },
+    sleep: async (ms) => {
+      slept.push(ms);
     },
     readFile: async (path) => files.get(path) ?? null,
     writeFile: async (path, content) => {
@@ -76,6 +93,24 @@ describe("지문 출처 (명세 10절)", () => {
     expect(first).toMatch(/^[0-9a-f-]{36}$/);
     expect(await source.read()).toBe(first);
     expect(await nodeFingerprintSource({}, fakeDeps("linux", {})).read()).toBeNull();
+  });
+
+  // 1.2.0 — 2026-11-20 Windows에서 MachineGuid 읽기가 한 번 실패해 설치 ID로 등록됐다(같은 PC가 다른 기기)
+  it("한 번 실패해도 설치 ID로 물러나기 전에 다시 읽는다", async () => {
+    const guid = "    MachineGuid    REG_SZ    3f1e9a2b-1111-2222-3333-444455556666\r\n";
+    const win = fakeDeps("win32", { reg: [new Error("잠시 실패"), "", guid] });
+    const source = nodeFingerprintSource({ installIdFile: "/app/install-id" }, win);
+    expect(await source.read()).toBe("3f1e9a2b-1111-2222-3333-444455556666");
+    expect(win.files.has("/app/install-id")).toBe(false);
+    expect(win.calls).toHaveLength(3);
+    expect(win.slept).toEqual([
+      RULES.fingerprint.sourceReadRetryDelayMs,
+      RULES.fingerprint.sourceReadRetryDelayMs,
+    ]);
+    const all = fakeDeps("win32", { reg: new Error("계속 실패") });
+    const fallback = await nodeFingerprintSource({ installIdFile: "/app/install-id" }, all).read();
+    expect(fallback).toMatch(/^[0-9a-f-]{36}$/);
+    expect(all.calls).toHaveLength(RULES.fingerprint.sourceReadAttempts);
   });
 
   it("이 기기(macOS)의 실제 IOPlatformUUID", async () => {

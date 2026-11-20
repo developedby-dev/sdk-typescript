@@ -114,6 +114,8 @@ function waitForReply(): Promise<void> {
 // ── 저장소 ───────────────────────────────────────────────────
 let record: CredentialRecord | null = null;
 const failures = { load: false, save: false, clear: false };
+/** set fingerprint.fail — 지문 출처를 읽지 못한다(하네스 규약 2절) */
+let fingerprintFails = false;
 const store: CredentialStore = {
   async load() {
     if (failures.load) throw new Error("저장소 읽기 실패(시험)");
@@ -345,7 +347,7 @@ function init(message: InitMessage): void {
           return `00000000-0000-4000-8000-${uuidCounter.toString(16).padStart(12, "0")}`;
         },
       },
-      fingerprint: { read: async () => device.fingerprintSource },
+      fingerprint: { read: async () => (fingerprintFails ? null : device.fingerprintSource) },
       logger: {
         debug: () => undefined,
         info: () => undefined,
@@ -412,6 +414,11 @@ async function main(): Promise<void> {
         await advance(message.ms as number);
         break;
       case "set": {
+        if (message.key === "fingerprint.fail") {
+          fingerprintFails = message.value === true;
+          await settle();
+          break;
+        }
         const key = String(message.key)
           .replace("storage.fail", "")
           .toLowerCase() as keyof typeof failures;

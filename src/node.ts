@@ -18,6 +18,8 @@ export interface NodeDeps {
   readFile(path: string): Promise<string | null>;
   writeFile(path: string, content: string): Promise<void>;
   remove(path: string): Promise<void>;
+  /** 지문 출처를 다시 읽기 전 기다림(명세 10절) — 없으면 setTimeout. 시험은 기다리지 않게 바꿔 끼운다 */
+  sleep?(ms: number): Promise<void>;
 }
 
 export const nodeDeps: NodeDeps = {
@@ -87,11 +89,20 @@ export function nodeFingerprintSource(
 ): FingerprintSource {
   return {
     async read() {
-      try {
-        const value = await readMachineId(deps);
-        if (value !== null && value.trim() !== "") return value.trim();
-      } catch {
-        // 아래 설치 ID로
+      // 실패하거나 빈 값이면 설치 ID로 물러나기 전에 다시 읽는다(명세 10절) — 일시적인 실패 하나로 같은 PC가 다른 기기가 되지 않게
+      const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+      for (
+        let attempt = 0;
+        attempt < Math.max(RULES.fingerprint.sourceReadAttempts, 1);
+        attempt++
+      ) {
+        if (attempt > 0) await sleep(RULES.fingerprint.sourceReadRetryDelayMs);
+        try {
+          const value = await readMachineId(deps);
+          if (value !== null && value.trim() !== "") return value.trim();
+        } catch {
+          // 다시 읽거나 아래 설치 ID로
+        }
       }
       if (options.installIdFile === undefined) return null;
       const existing = (await deps.readFile(options.installIdFile))?.trim();

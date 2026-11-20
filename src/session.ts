@@ -100,6 +100,8 @@ export interface SessionSnapshot {
   /** `Degraded`의 잠금 예약 시각 (8.4절) */
   readonly offlineAt: number | null;
   readonly fallbackSource: string | null;
+  /** 처음 계산한 지문 해시 — 한 실행 동안 다시 쓴다(명세 10절, 1.2.0). 이 칸이 없는 앞 판의 스냅숏은 다음 획득 때 계산한다 */
+  readonly fingerprint?: string | null;
   /** 메모리의 access_token — 다시 뜰 때마다 갱신(refresh_token 회전)하지 않게 */
   readonly access: AccessToken | null;
 }
@@ -134,6 +136,8 @@ export class LicenseSession {
   private pending: PendingWork | null = null;
   private offlineAt: number | null = null;
   private fallbackSource: string | null = null;
+  /** 처음 계산한 지문 해시 — 획득마다 출처를 다시 읽으면 일시적인 읽기 실패 하나로 다른 기기가 된다(명세 10절) */
+  private fingerprint: string | null = null;
   private readonly watchers = new Set<() => void>();
   private readonly api: Api;
   private readonly ports: Ports;
@@ -237,6 +241,7 @@ export class LicenseSession {
       pending: this.pending,
       offlineAt: this.offlineAt,
       fallbackSource: this.fallbackSource,
+      fingerprint: this.fingerprint,
       access: this.tokens.currentAccess(),
     };
   }
@@ -253,6 +258,7 @@ export class LicenseSession {
     this.held = snapshot.held;
     this.failures = snapshot.failures;
     this.fallbackSource = snapshot.fallbackSource;
+    this.fingerprint = snapshot.fingerprint ?? null;
     if (snapshot.access !== null) this.tokens.restoreAccess(snapshot.access);
     if (snapshot.held !== null) this.verifier.noteGeneration(snapshot.held.claims);
     this.setState(snapshot.state);
@@ -336,6 +342,13 @@ export class LicenseSession {
   }
 
   private async fingerprintHash(): Promise<string> {
+    if (this.fingerprint !== null) return this.fingerprint;
+    const hash = await this.computeFingerprintHash();
+    this.fingerprint ??= hash; // 동시에 계산했으면 먼저 정한 값
+    return this.fingerprint;
+  }
+
+  private async computeFingerprintHash(): Promise<string> {
     let source: string | null = null;
     try {
       source = await this.ports.fingerprint.read();

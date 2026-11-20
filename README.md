@@ -7,7 +7,7 @@
 
 | 지원 | 버전 |
 |---|---|
-| 동작 명세 | 1.1.1 |
+| 동작 명세 | 1.2.0 |
 | API | v1 |
 | 런타임 | Node 24, Chrome과 Edge 137 이상(WebCrypto Ed25519를 지원하는 버전, 2025년 5월 출시), Electron 메인 프로세스(해당 Electron의 Node가 WebCrypto Ed25519를 지원해야 합니다) |
 | 타입 | TypeScript 5.7 이상(`Uint8Array<…>` 표기를 씁니다). `@bydev/sdk/node`를 쓰려면 `@types/node`도 필요합니다. 패키지에는 JS와 타입 정의(`dist`)가 들어 있습니다. |
