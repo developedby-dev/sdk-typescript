@@ -28,7 +28,24 @@ jobs:
       - run: pnpm install
       - run: pnpm run typecheck
       - run: pnpm test
-      - run: npm pack
+      # pnpm pack — publishConfig의 exports(dist)를 꾸러미에 적용한다. npm pack은 적용하지 않아 0.1.0이 src/*.ts를 가리킨 채 나갔다(2026-11-21)
+      - run: pnpm pack
+      - name: 꾸러미 확인 — exports가 dist를 가리키고, 빈 프로젝트에 설치해 네 진입점을 불러온다
+        run: |
+          set -euo pipefail
+          tgz=$(ls bydev-sdk-*.tgz)
+          tar xzf "$tgz" -O package/package.json | node -e '
+            const p = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            for (const [k, v] of Object.entries(p.exports)) {
+              const t = typeof v === "string" ? v : v.default;
+              if (!t.startsWith("./dist/")) { console.error("exports가 dist 밖을 가리킨다:", k, t); process.exit(1); }
+            }'
+          dir=$(mktemp -d)
+          cp "$tgz" "$dir/"
+          cd "$dir"
+          npm init -y >/dev/null
+          npm install "./$tgz" >/dev/null
+          node --input-type=module -e 'for (const m of ["@bydev/sdk", "@bydev/sdk/server", "@bydev/sdk/node", "@bydev/sdk/extension"]) await import(m); console.log("네 진입점 import 통과")'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package
